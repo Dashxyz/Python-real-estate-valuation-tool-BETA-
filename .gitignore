@@ -1,0 +1,8 @@
+# Ignore API keys, certificates, and secrets
+*.pem
+*.key
+*.crt
+*.env
+.env.*
+secrets.*
+config.json
