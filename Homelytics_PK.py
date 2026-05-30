@@ -1,4 +1,4 @@
-# This is the Pakistani V13(BETA) of HOMELYTICS update:(SMART DYNAMIC UI + 1.5 FLASH for rate limits)
+# This is the Pakistani V1.3(BETA) of HOMELYTICS update:(SMART DYNAMIC UI + 1.5 FLASH for rate limits)
 #   DISCLAIMER THIS CODE IS IN BETA AND IS NOT FULLY TESTED OR TRAINED 
 import google.generativeai as genai
 import gradio as gr
