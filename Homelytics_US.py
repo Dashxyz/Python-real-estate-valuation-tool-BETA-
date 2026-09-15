@@ -11,7 +11,7 @@ import gradio as gr
 from PIL import Image
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from ddgs.ddgs import DDGS
+from duckduckgo_search import DDGS
 import re
 import time
 import os
