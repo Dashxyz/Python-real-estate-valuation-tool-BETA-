@@ -563,4 +563,4 @@ with gr.Blocks(theme=gr.themes.Soft(), title="Homelytics Pakistan") as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    demo.launch(share=False)
