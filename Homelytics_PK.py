@@ -17,6 +17,7 @@ import os
 import json
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import deque
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -34,7 +35,7 @@ VALUATION_MODEL = genai.GenerativeModel('gemini-1.5-flash-latest')
 _search_cache = {}
 
 # Request log (in-memory, appended each run)
-_request_log = []
+_request_log = deque(maxlen=1000)
 
 # ---------------------------------------------------------------------------
 # Unit Converters
