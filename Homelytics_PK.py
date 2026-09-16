@@ -10,13 +10,14 @@ import gradio as gr
 from PIL import Image
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from ddgs.ddgs import DDGS
+from duckduckgo_search import DDGS
 import re
 import time
 import os
 import json
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import collections
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -34,7 +35,7 @@ VALUATION_MODEL = genai.GenerativeModel('gemini-1.5-flash-latest')
 _search_cache = {}
 
 # Request log (in-memory, appended each run)
-_request_log = []
+_request_log = collections.deque(maxlen=1000)
 
 # ---------------------------------------------------------------------------
 # Unit Converters
