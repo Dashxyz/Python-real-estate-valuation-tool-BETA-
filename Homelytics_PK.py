@@ -17,6 +17,7 @@ import os
 import json
 import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from image_analysis import analyze_images_parallel as analyze_images_parallel_shared, PROMPT_PK
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -226,29 +227,8 @@ def find_location_sequentially(geolocator, address):
 # ---------------------------------------------------------------------------
 # Image Analysis — parallel
 # ---------------------------------------------------------------------------
-def analyze_single_image(img):
-    prompt = (
-        "Analyze this property image from Pakistan. "
-        "Describe: (1) overall condition (Excellent/Good/Average/Needs Renovation), "
-        "(2) architectural style and finish quality, "
-        "(3) specific features visible (pool, garden, parking, extra floors, modern kitchen, etc.), "
-        "(4) any red flags or issues that would negatively affect value."
-    )
-    return VISION_MODEL.generate_content([prompt, img]).text
-
 def analyze_images_parallel(photos):
-    if not photos:
-        return "No photos provided."
-    pil_images = [Image.open(p.name) for p in photos]
-    descriptions = []
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(analyze_single_image, img): i for i, img in enumerate(pil_images)}
-        for future in as_completed(futures):
-            try:
-                descriptions.append(future.result())
-            except Exception as e:
-                descriptions.append(f"Image analysis failed: {e}")
-    return "\n\n---\n\n".join(descriptions)
+    return analyze_images_parallel_shared(photos, VISION_MODEL, PROMPT_PK)
 
 # ---------------------------------------------------------------------------
 # Request Logger
