@@ -14,7 +14,7 @@ pip install -q --force-reinstall \
     gradio==3.50.2 \
     pillow \
     geopy \
-    ddgs \
+    duckduckgo-search \
     fastapi==0.99.1 \
     uvicorn==0.22.0 \
     huggingface_hub==0.19.4 \

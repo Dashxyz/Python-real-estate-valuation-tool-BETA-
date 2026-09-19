@@ -1,5 +1,5 @@
-                  # Made by Yahya Ahmad AKA, Dashxyz
-      # Homelytics Pakistan V5
+# Made by Yahya Ahmad AKA, Dashxyz
+# Homelytics Pakistan V5
 # Improvements: parallel image analysis, global model instances, additional property inputs,
 # unit converters, multi-query market research, deterministic price/sqft model,
 # society premium detection, location confidence, structured output sections,
@@ -10,7 +10,7 @@ import gradio as gr
 from PIL import Image
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
-from ddgs.ddgs import DDGS
+from duckduckgo_search import DDGS
 import re
 import time
 import os
@@ -27,7 +27,7 @@ if not GOOGLE_AI_API_KEY:
 genai.configure(api_key=GOOGLE_AI_API_KEY)
 
 # Global model instances — instantiated once at startup for speed
-VISION_MODEL    = genai.GenerativeModel('gemini-1.5-flash-latest')
+VISION_MODEL = genai.GenerativeModel('gemini-1.5-flash-latest')
 VALUATION_MODEL = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 # In-memory search cache
@@ -39,33 +39,40 @@ _request_log = []
 # ---------------------------------------------------------------------------
 # Unit Converters
 # ---------------------------------------------------------------------------
-def marla_to_sqft(marla):   return marla * 272.25
-def kanal_to_sqft(kanal):   return kanal * 5445.0
-def sqft_to_marla(sqft):    return sqft / 272.25
-def sqft_to_kanal(sqft):    return sqft / 5445.0
+
+
+def marla_to_sqft(marla): return marla * 272.25
+def kanal_to_sqft(kanal): return kanal * 5445.0
+def sqft_to_marla(sqft): return sqft / 272.25
+def sqft_to_kanal(sqft): return sqft / 5445.0
+
 
 def land_to_sqft_pk(size, unit):
-    if unit == "Marla":  return marla_to_sqft(size)
-    if unit == "Kanal":  return kanal_to_sqft(size)
+    if unit == "Marla":
+        return marla_to_sqft(size)
+    if unit == "Kanal":
+        return kanal_to_sqft(size)
     return size  # already sqft
+
 
 # ---------------------------------------------------------------------------
 # Society / Premium Area Detection (PK)
 # ---------------------------------------------------------------------------
 PREMIUM_SOCIETIES = {
-    "dha":      0.35,
-    "bahria":   0.25,
-    "gulberg":  0.20,
+    "dha": 0.35,
+    "bahria": 0.25,
+    "gulberg": 0.20,
     "model town": 0.18,
     "johar town": 0.10,
-    "cantt":    0.15,
-    "clifton":  0.30,
-    "defence":  0.35,
-    "f-6":      0.25,
-    "f-7":      0.25,
-    "f-8":      0.20,
-    "e-7":      0.22,
+    "cantt": 0.15,
+    "clifton": 0.30,
+    "defence": 0.35,
+    "f-6": 0.25,
+    "f-7": 0.25,
+    "f-8": 0.20,
+    "e-7": 0.22,
 }
+
 
 def detect_society_premium(address):
     addr_lower = address.lower()
@@ -74,30 +81,74 @@ def detect_society_premium(address):
             return society.upper(), premium
     return None, 0.0
 
+
 # ---------------------------------------------------------------------------
 # Base Price-Per-Sqft Model (PKR) — deterministic fallback
 # ---------------------------------------------------------------------------
 BASE_PRICE_SQFT_PKR = {
-    "Lahore":     {"House": 12000, "Apartment": 10000, "Farmhouse": 6000,  "Mall": 25000, "Warehouse": 8000},
-    "Karachi":    {"House": 14000, "Apartment": 12000, "Farmhouse": 5000,  "Mall": 28000, "Warehouse": 9000},
-    "Islamabad":  {"House": 18000, "Apartment": 15000, "Farmhouse": 8000,  "Mall": 35000, "Warehouse": 11000},
-    "Rawalpindi": {"House": 10000, "Apartment": 8000,  "Farmhouse": 4500,  "Mall": 20000, "Warehouse": 7000},
-    "Faisalabad": {"House": 8000,  "Apartment": 7000,  "Farmhouse": 3500,  "Mall": 18000, "Warehouse": 6000},
-    "Peshawar":   {"House": 9000,  "Apartment": 7500,  "Farmhouse": 4000,  "Mall": 19000, "Warehouse": 6500},
+    "Lahore": {
+        "House": 12000,
+        "Apartment": 10000,
+        "Farmhouse": 6000,
+        "Mall": 25000,
+        "Warehouse": 8000},
+    "Karachi": {
+        "House": 14000,
+        "Apartment": 12000,
+        "Farmhouse": 5000,
+        "Mall": 28000,
+        "Warehouse": 9000},
+    "Islamabad": {
+        "House": 18000,
+        "Apartment": 15000,
+        "Farmhouse": 8000,
+        "Mall": 35000,
+        "Warehouse": 11000},
+    "Rawalpindi": {
+        "House": 10000,
+        "Apartment": 8000,
+        "Farmhouse": 4500,
+        "Mall": 20000,
+        "Warehouse": 7000},
+    "Faisalabad": {
+        "House": 8000,
+        "Apartment": 7000,
+        "Farmhouse": 3500,
+        "Mall": 18000,
+        "Warehouse": 6000},
+    "Peshawar": {
+        "House": 9000,
+        "Apartment": 7500,
+        "Farmhouse": 4000,
+        "Mall": 19000,
+        "Warehouse": 6500},
 }
 PLOT_PRICE_PER_SQFT_PKR = {
     "Lahore": 9000, "Karachi": 11000, "Islamabad": 14000,
     "Rawalpindi": 7000, "Faisalabad": 5500, "Peshawar": 6000,
 }
-CONDITION_MULTIPLIERS = {"Excellent": 1.20, "Good": 1.05, "Average": 1.00, "Needs Renovation": 0.80}
+CONDITION_MULTIPLIERS = {
+    "Excellent": 1.20,
+    "Good": 1.05,
+    "Average": 1.00,
+    "Needs Renovation": 0.80}
 AGE_MULTIPLIERS = {
     "Brand New (0-2 yrs)": 1.15, "Recent (3-10 yrs)": 1.05,
     "Established (11-20 yrs)": 0.95, "Old (20+ yrs)": 0.85
 }
 
-def compute_deterministic_estimate(city, property_type, sq_ft, land_sqft, condition, year_built_category, society_premium):
+
+def compute_deterministic_estimate(
+        city,
+        property_type,
+        sq_ft,
+        land_sqft,
+        condition,
+        year_built_category,
+        society_premium):
     try:
-        multiplier = CONDITION_MULTIPLIERS.get(condition, 1.0) * AGE_MULTIPLIERS.get(year_built_category, 1.0) * (1 + society_premium)
+        multiplier = CONDITION_MULTIPLIERS.get(
+            condition, 1.0) * AGE_MULTIPLIERS.get(year_built_category, 1.0) * (1 + society_premium)
         if property_type == "Plot":
             base = PLOT_PRICE_PER_SQFT_PKR.get(city, 8000)
             total = base * land_sqft * multiplier
@@ -106,12 +157,13 @@ def compute_deterministic_estimate(city, property_type, sq_ft, land_sqft, condit
             base = BASE_PRICE_SQFT_PKR.get(city, {}).get(property_type, 10000)
             total = base * sq_ft * multiplier
             price_per_sqft = base * multiplier
-        low  = total * 0.88
+        low = total * 0.88
         high = total * 1.12
         return round(low), round(high), round(price_per_sqft)
     except Exception as e:
         print(f"Deterministic estimate error: {e}")
         return None, None, None
+
 
 def format_pkr(amount):
     """Format number in Pakistani comma style (e.g. 2,50,00,000)"""
@@ -130,6 +182,8 @@ def format_pkr(amount):
 # ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------
+
+
 def search_market_prices_ddg(query, region='pk-en'):
     if query in _search_cache:
         print(f"CACHE HIT: '{query}'")
@@ -139,7 +193,7 @@ def search_market_prices_ddg(query, region='pk-en'):
         if not results:
             return "No recent market data found..."
         snippets = [
-            f"Title: {item.get('title','N/A')}\nSnippet: {item.get('body','N/A')}\n"
+            f"Title: {item.get('title', 'N/A')}\nSnippet: {item.get('body', 'N/A')}\n"
             for item in results
         ]
         result_text = "\n---\n".join(snippets)
@@ -148,6 +202,7 @@ def search_market_prices_ddg(query, region='pk-en'):
     except Exception as e:
         print(f"DDG Search Error: {e}")
         return "Could not perform market research."
+
 
 def multi_query_search(city, property_type, sq_ft, land_size, land_unit):
     """Run multiple targeted searches for richer market data"""
@@ -173,49 +228,71 @@ def multi_query_search(city, property_type, sq_ft, land_size, land_unit):
 # ---------------------------------------------------------------------------
 # Geocoding
 # ---------------------------------------------------------------------------
+
+
 def get_city_from_nominatim(location):
     if not location or not location.address:
         return None
     full_address = location.address.lower()
-    cities = ["lahore","karachi","islamabad","rawalpindi","faisalabad","peshawar","multan","quetta","sialkot","gujranwala"]
+    cities = [
+        "lahore",
+        "karachi",
+        "islamabad",
+        "rawalpindi",
+        "faisalabad",
+        "peshawar",
+        "multan",
+        "quetta",
+        "sialkot",
+        "gujranwala"]
     for part in [p.strip() for p in full_address.split(',')]:
         for city in cities:
             if city in part:
                 return city.title()
     return None
 
+
 def get_location_confidence(location, address):
     if not location:
         return "Low", "Address could not be geocoded."
     raw = location.raw.get('address', {})
-    has_street    = bool(raw.get('road') or raw.get('house_number'))
-    has_district  = bool(raw.get('suburb') or raw.get('neighbourhood') or raw.get('city_district'))
-    has_city      = bool(raw.get('city') or raw.get('town'))
+    has_street = bool(raw.get('road') or raw.get('house_number'))
+    has_district = bool(raw.get('suburb') or raw.get(
+        'neighbourhood') or raw.get('city_district'))
+    has_city = bool(raw.get('city') or raw.get('town'))
     score = sum([has_street, has_district, has_city])
-    if score == 3: return "High",   "Street, district, and city all confirmed."
-    if score == 2: return "Medium", "City and district confirmed; street-level precision may vary."
+    if score == 3:
+        return "High", "Street, district, and city all confirmed."
+    if score == 2:
+        return "Medium", "City and district confirmed; street-level precision may vary."
     return "Low", "Only approximate location matched. Verify the address."
+
 
 def find_location_sequentially(geolocator, address):
     attempts = [
         f"{address}, Pakistan",
         address,
     ]
-    match = re.search(r"((?:DHA|Bahria|Model|Gulberg|Johar)\s+(?:Town|City|Phase|Sector|Enclave)[\s\w\d-]+)", address, re.IGNORECASE)
+    match = re.search(
+        r"((?:DHA|Bahria|Model|Gulberg|Johar)\s+(?:Town|City|Phase|Sector|Enclave)[\s\w\d-]+)",
+        address,
+        re.IGNORECASE)
     if match:
         area = match.group(1).strip()
-        for city_kw in ["lahore","karachi","islamabad"]:
+        for city_kw in ["lahore", "karachi", "islamabad"]:
             if city_kw in address.lower():
                 area += f", {city_kw.title()}"
                 break
         attempts.insert(1, f"{area}, Pakistan")
-    simplified = ", ".join(address.split(',')[-2:]) if ',' in address else " ".join(address.split()[-3:])
+    simplified = ", ".join(address.split(
+        ',')[-2:]) if ',' in address else " ".join(address.split()[-3:])
     attempts.append(f"{simplified}, Pakistan")
 
     for i, attempt in enumerate(attempts, 1):
         print(f"GEOCODING (ATTEMPT {i}): '{attempt}'")
         try:
-            loc = geolocator.geocode(attempt, country_codes="pk", language='en')
+            loc = geolocator.geocode(
+                attempt, country_codes="pk", language='en')
             if loc:
                 return loc
             time.sleep(0.8)
@@ -226,15 +303,17 @@ def find_location_sequentially(geolocator, address):
 # ---------------------------------------------------------------------------
 # Image Analysis — parallel
 # ---------------------------------------------------------------------------
+
+
 def analyze_single_image(img):
     prompt = (
         "Analyze this property image from Pakistan. "
         "Describe: (1) overall condition (Excellent/Good/Average/Needs Renovation), "
         "(2) architectural style and finish quality, "
         "(3) specific features visible (pool, garden, parking, extra floors, modern kitchen, etc.), "
-        "(4) any red flags or issues that would negatively affect value."
-    )
+        "(4) any red flags or issues that would negatively affect value.")
     return VISION_MODEL.generate_content([prompt, img]).text
+
 
 def analyze_images_parallel(photos):
     if not photos:
@@ -242,7 +321,11 @@ def analyze_images_parallel(photos):
     pil_images = [Image.open(p.name) for p in photos]
     descriptions = []
     with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(analyze_single_image, img): i for i, img in enumerate(pil_images)}
+        futures = {
+            executor.submit(
+                analyze_single_image,
+                img): i for i,
+            img in enumerate(pil_images)}
         for future in as_completed(futures):
             try:
                 descriptions.append(future.result())
@@ -253,13 +336,15 @@ def analyze_images_parallel(photos):
 # ---------------------------------------------------------------------------
 # Request Logger
 # ---------------------------------------------------------------------------
+
+
 def log_request(address, property_type, city, estimated_low, estimated_high):
     entry = {
-        "timestamp":    datetime.datetime.now().isoformat(),
-        "address":      address,
+        "timestamp": datetime.datetime.now().isoformat(),
+        "address": address,
         "property_type": property_type,
-        "city":         city,
-        "est_low_pkr":  estimated_low,
+        "city": city,
+        "est_low_pkr": estimated_low,
         "est_high_pkr": estimated_high,
     }
     _request_log.append(entry)
@@ -268,6 +353,8 @@ def log_request(address, property_type, city, estimated_low, estimated_high):
 # ---------------------------------------------------------------------------
 # Main Valuation Function
 # ---------------------------------------------------------------------------
+
+
 def get_property_valuation(
     address, property_type, bedrooms, bathrooms, sq_ft,
     land_size, land_unit, covered_area,
@@ -297,30 +384,32 @@ def get_property_valuation(
     if not city:
         return (
             "Location found but city not recognised. Supported cities: Lahore, Karachi, Islamabad, "
-            "Rawalpindi, Faisalabad, Peshawar, Multan, Quetta, Sialkot, Gujranwala.", "", "", ""
-        )
-    loc_confidence, loc_confidence_note = get_location_confidence(location, address)
+            "Rawalpindi, Faisalabad, Peshawar, Multan, Quetta, Sialkot, Gujranwala.", "", "", "")
+    loc_confidence, loc_confidence_note = get_location_confidence(
+        location, address)
     formatted_address = location.address
     lat = location.latitude
     lng = location.longitude
 
     # --- Society detection ---
     society_name, society_premium = detect_society_premium(address)
-    society_note = f"Society/premium area detected: {society_name} (+{int(society_premium*100)}% premium applied)" if society_name else "No premium society detected."
+    society_note = f"Society/premium area detected: {society_name} (+{int(society_premium * 100)}% premium applied)" if society_name else "No premium society detected."
 
     # --- Unit conversions ---
-    land_sqft = land_to_sqft_pk(land_size, land_unit) if property_type == "Plot" else 0
+    land_sqft = land_to_sqft_pk(
+        land_size, land_unit) if property_type == "Plot" else 0
     effective_sqft = land_sqft if property_type == "Plot" else (sq_ft or 0)
 
     # --- Deterministic price estimate ---
     est_low, est_high, price_per_sqft = compute_deterministic_estimate(
-        city, property_type, effective_sqft, land_sqft, condition, year_built_category, society_premium
-    )
+        city, property_type, effective_sqft, land_sqft, condition, year_built_category, society_premium)
 
     # --- Market research (multi-query) ---
     print(f"INFO: Running market research for {city}...")
-    market_research_results = multi_query_search(city, property_type, sq_ft, land_size, land_unit)
-    low_data = len(market_research_results) < 300 or "No market data" in market_research_results
+    market_research_results = multi_query_search(
+        city, property_type, sq_ft, land_size, land_unit)
+    low_data = len(
+        market_research_results) < 300 or "No market data" in market_research_results
     low_data_warning = "\n\n> ⚠️ **Limited market data** — estimate based primarily on base rates. Verify with a local agent.\n\n" if low_data else ""
 
     # --- Parallel image analysis ---
@@ -329,10 +418,14 @@ def get_property_valuation(
 
     # --- Build property details ---
     extras = []
-    if stories > 1:       extras.append(f"{stories} stories")
-    if parking != "None": extras.append(f"Parking: {parking}")
-    if pool:              extras.append("Swimming pool")
-    if basement:          extras.append("Basement")
+    if stories > 1:
+        extras.append(f"{stories} stories")
+    if parking != "None":
+        extras.append(f"Parking: {parking}")
+    if pool:
+        extras.append("Swimming pool")
+    if basement:
+        extras.append("Basement")
     extras_str = ", ".join(extras) if extras else "None specified"
 
     if property_type == "Plot":
@@ -368,14 +461,14 @@ def get_property_valuation(
 
     # --- Deterministic estimate block ---
     if est_low and est_high:
-        usd_low  = round(est_low  / 278)
+        usd_low = round(est_low / 278)
         usd_high = round(est_high / 278)
         det_block = (
             f"\n\n---\n## 📊 Model-Based Estimate (Deterministic)\n"
             f"- **Price Range:** PKR {format_pkr(est_low)} – PKR {format_pkr(est_high)}\n"
             f"- **USD Equivalent:** ${usd_low:,} – ${usd_high:,}\n"
             f"- **Price per Sq Ft:** PKR {format_pkr(price_per_sqft)}\n"
-            f"- **Based on:** City base rates × condition ({condition}) × age ({year_built_category}) × society premium ({int(society_premium*100)}%)\n"
+            f"- **Based on:** City base rates × condition ({condition}) × age ({year_built_category}) × society premium ({int(society_premium * 100)}%)\n"
             f"- **Location Confidence:** {loc_confidence} — {loc_confidence_note}\n\n---\n"
         )
     else:
@@ -432,13 +525,15 @@ Keep each section concise. Do not hallucinate price numbers — the numeric esti
 # ---------------------------------------------------------------------------
 # UI Visibility
 # ---------------------------------------------------------------------------
+
+
 def update_visibility(property_type):
     is_commercial = property_type in ["Mall", "Warehouse"]
-    is_plot       = property_type == "Plot"
-    show_rooms    = not is_commercial and not is_plot
-    show_sqft     = not is_plot
-    show_land     = is_plot
-    show_covered  = not is_commercial and not is_plot
+    is_plot = property_type == "Plot"
+    show_rooms = not is_commercial and not is_plot
+    show_sqft = not is_plot
+    show_land = is_plot
+    show_covered = not is_commercial and not is_plot
     return (
         gr.Slider(visible=show_rooms),
         gr.Slider(visible=show_rooms),
@@ -451,20 +546,25 @@ def update_visibility(property_type):
 # ---------------------------------------------------------------------------
 # Feedback
 # ---------------------------------------------------------------------------
+
+
 def submit_feedback(feedback_text):
     if not feedback_text or not feedback_text.strip():
         return "Please enter feedback before submitting."
-    entry = {"timestamp": datetime.datetime.now().isoformat(), "feedback": feedback_text}
+    entry = {"timestamp": datetime.datetime.now().isoformat(),
+             "feedback": feedback_text}
     _request_log.append({"type": "feedback", **entry})
     print(f"FEEDBACK: {json.dumps(entry)}")
     return "Thank you! Your feedback helps improve Homelytics."
+
 
 # ---------------------------------------------------------------------------
 # Gradio UI
 # ---------------------------------------------------------------------------
 with gr.Blocks(theme=gr.themes.Soft(), title="Homelytics Pakistan") as demo:
     gr.Markdown("# 🏡 Homelytics Pakistan — AI Real Estate Valuator")
-    gr.Markdown("*Gemini 1.5 Flash · Live Market Research · Deterministic Price Model · Parallel Image Analysis*")
+    gr.Markdown(
+        "*Gemini 1.5 Flash · Live Market Research · Deterministic Price Model · Parallel Image Analysis*")
 
     with gr.Row():
         # --- Input Column ---
@@ -475,36 +575,75 @@ with gr.Blocks(theme=gr.themes.Soft(), title="Homelytics Pakistan") as demo:
             )
             property_type = gr.Dropdown(
                 label="Property Type",
-                choices=["House", "Apartment", "Plot", "Farmhouse", "Mall", "Warehouse"],
-                value="House"
-            )
+                choices=[
+                    "House",
+                    "Apartment",
+                    "Plot",
+                    "Farmhouse",
+                    "Mall",
+                    "Warehouse"],
+                value="House")
 
             with gr.Group():
-                bedrooms     = gr.Slider(label="Bedrooms",  minimum=1, maximum=30, step=1, value=3,    visible=True)
-                bathrooms    = gr.Slider(label="Bathrooms", minimum=1, maximum=30, step=1, value=2,    visible=True)
-                sq_ft        = gr.Number(label="Built-up Area (Sq Ft)", value=2250,                    visible=True)
-                covered_area = gr.Number(label="Covered Area (Sq Ft) — optional", value=0,             visible=True)
-                land_size    = gr.Number(label="Land Size",  value=10,                                 visible=False)
-                land_unit    = gr.Dropdown(label="Land Unit", choices=["Marla","Kanal"], value="Marla", visible=False)
+                bedrooms = gr.Slider(
+                    label="Bedrooms",
+                    minimum=1,
+                    maximum=30,
+                    step=1,
+                    value=3,
+                    visible=True)
+                bathrooms = gr.Slider(
+                    label="Bathrooms",
+                    minimum=1,
+                    maximum=30,
+                    step=1,
+                    value=2,
+                    visible=True)
+                sq_ft = gr.Number(
+                    label="Built-up Area (Sq Ft)",
+                    value=2250,
+                    visible=True)
+                covered_area = gr.Number(
+                    label="Covered Area (Sq Ft) — optional", value=0, visible=True)
+                land_size = gr.Number(
+                    label="Land Size", value=10, visible=False)
+                land_unit = gr.Dropdown(
+                    label="Land Unit", choices=[
+                        "Marla", "Kanal"], value="Marla", visible=False)
 
             with gr.Group():
                 year_built_category = gr.Dropdown(
                     label="Year Built",
-                    choices=["Brand New (0-2 yrs)","Recent (3-10 yrs)","Established (11-20 yrs)","Old (20+ yrs)"],
-                    value="Recent (3-10 yrs)"
-                )
+                    choices=[
+                        "Brand New (0-2 yrs)",
+                        "Recent (3-10 yrs)",
+                        "Established (11-20 yrs)",
+                        "Old (20+ yrs)"],
+                    value="Recent (3-10 yrs)")
                 condition = gr.Dropdown(
                     label="Property Condition",
-                    choices=["Excellent","Good","Average","Needs Renovation"],
-                    value="Good"
-                )
-                stories = gr.Slider(label="Number of Stories", minimum=1, maximum=10, step=1, value=1)
+                    choices=[
+                        "Excellent",
+                        "Good",
+                        "Average",
+                        "Needs Renovation"],
+                    value="Good")
+                stories = gr.Slider(
+                    label="Number of Stories",
+                    minimum=1,
+                    maximum=10,
+                    step=1,
+                    value=1)
                 parking = gr.Dropdown(
                     label="Parking",
-                    choices=["None","1 Car","2 Cars","3+ Cars","Covered Parking"],
-                    value="1 Car"
-                )
-                pool     = gr.Checkbox(label="Swimming Pool")
+                    choices=[
+                        "None",
+                        "1 Car",
+                        "2 Cars",
+                        "3+ Cars",
+                        "Covered Parking"],
+                    value="1 Car")
+                pool = gr.Checkbox(label="Swimming Pool")
                 basement = gr.Checkbox(label="Basement")
 
             photos = gr.File(
@@ -512,48 +651,71 @@ with gr.Blocks(theme=gr.themes.Soft(), title="Homelytics Pakistan") as demo:
                 file_types=["image"],
                 label="Upload Property Photos (max 5 recommended)"
             )
-            submit_btn = gr.Button("🔍 Get Valuation", variant="primary", size="lg")
+            submit_btn = gr.Button(
+                "🔍 Get Valuation",
+                variant="primary",
+                size="lg")
 
         # --- Output Column ---
         with gr.Column(scale=2):
             valuation_output = gr.Markdown(label="Valuation Report")
 
             with gr.Accordion("📸 Photo Analysis Details", open=False):
-                image_analysis_output = gr.Textbox(label="Image Analysis", lines=10, interactive=False)
+                image_analysis_output = gr.Textbox(
+                    label="Image Analysis", lines=10, interactive=False)
 
             with gr.Accordion("📰 Market Research Data", open=False):
-                market_research_output = gr.Textbox(label="Raw Market Data", lines=10, interactive=False)
+                market_research_output = gr.Textbox(
+                    label="Raw Market Data", lines=10, interactive=False)
 
             with gr.Accordion("🏘️ Society / Area Detection", open=False):
-                society_output = gr.Textbox(label="Society Detection Result", lines=2, interactive=False)
+                society_output = gr.Textbox(
+                    label="Society Detection Result", lines=2, interactive=False)
 
             with gr.Accordion("💬 Feedback — Was this estimate accurate?", open=False):
                 feedback_input = gr.Textbox(
                     label="Your feedback",
                     placeholder="e.g. Actual sale price was PKR 2.8 crore, estimate was close.",
-                    lines=3
-                )
-                feedback_btn    = gr.Button("Submit Feedback")
+                    lines=3)
+                feedback_btn = gr.Button("Submit Feedback")
                 feedback_output = gr.Textbox(label="", interactive=False)
 
     # --- Wire up visibility ---
     property_type.change(
         fn=update_visibility,
         inputs=property_type,
-        outputs=[bedrooms, bathrooms, sq_ft, land_size, land_unit, covered_area]
-    )
+        outputs=[
+            bedrooms,
+            bathrooms,
+            sq_ft,
+            land_size,
+            land_unit,
+            covered_area])
 
     # --- Wire up submit ---
     submit_btn.click(
         fn=get_property_valuation,
         inputs=[
-            address, property_type, bedrooms, bathrooms, sq_ft,
-            land_size, land_unit, covered_area,
-            year_built_category, condition, stories, parking, pool, basement,
-            photos
-        ],
-        outputs=[valuation_output, image_analysis_output, market_research_output, society_output]
-    )
+            address,
+            property_type,
+            bedrooms,
+            bathrooms,
+            sq_ft,
+            land_size,
+            land_unit,
+            covered_area,
+            year_built_category,
+            condition,
+            stories,
+            parking,
+            pool,
+            basement,
+            photos],
+        outputs=[
+            valuation_output,
+            image_analysis_output,
+            market_research_output,
+            society_output])
 
     # --- Wire up feedback ---
     feedback_btn.click(
