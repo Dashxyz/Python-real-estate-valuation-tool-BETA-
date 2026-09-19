@@ -6,3 +6,7 @@
 .env.*
 secrets.*
 config.json
+run.log
+run_pk.log
+us_output.log
+__pycache__/
