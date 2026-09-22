@@ -1,0 +1,17 @@
+google-generativeai
+gradio==3.50.2
+pillow
+geopy
+duckduckgo-search
+ddgs
+fastapi==0.99.1
+uvicorn==0.22.0
+huggingface_hub==0.19.4
+httpx==0.24.1
+pydantic
+aiofiles
+python-multipart
+requests
+numpy
+pytest
+setuptools

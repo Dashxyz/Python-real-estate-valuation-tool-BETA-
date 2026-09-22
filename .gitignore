@@ -5,4 +5,4 @@
 *.env
 .env.*
 secrets.*
-config.json
+config.json__pycache__/
