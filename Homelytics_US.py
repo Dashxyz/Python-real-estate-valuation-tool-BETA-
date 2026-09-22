@@ -12,7 +12,6 @@ from PIL import Image
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 from ddgs.ddgs import DDGS
-import re
 import time
 import os
 import json
@@ -72,16 +71,18 @@ def get_price_tier(state):
 
 def compute_deterministic_estimate_us(state, property_type, sq_ft, land_sqft, condition, year_built_category, hoa):
     try:
+        if (sq_ft is not None and sq_ft < 0) or (land_sqft is not None and land_sqft < 0):
+            return None, None, None
         tier = get_price_tier(state)
         multiplier = CONDITION_MULTIPLIERS.get(condition,1.0) * AGE_MULTIPLIERS.get(year_built_category,1.0)
         if property_type == "Land":
             price_per_acre = LAND_PRICE_PER_ACRE_USD.get(tier,50000)
-            acres = sqft_to_acres(land_sqft)
+            acres = sqft_to_acres(land_sqft or 0)
             total = price_per_acre * acres * multiplier
             price_per_sqft = price_per_acre / 43560
         else:
             base = PRICE_SQFT_USD.get(tier,{}).get(property_type,200)
-            total = base * sq_ft * multiplier
+            total = base * (sq_ft or 0) * multiplier
             price_per_sqft = base * multiplier
         low  = total * 0.88
         high = total * 1.12
@@ -157,9 +158,9 @@ def get_location_details_us(location):
     return None, None, None
 
 def get_location_confidence_us(location, address):
-    if not location:
+    if not location or not hasattr(location, 'raw') or not isinstance(location.raw, dict):
         return "Low","Address could not be geocoded."
-    raw = location.raw.get('address',{})
+    raw = location.raw.get('address',{}) if isinstance(location.raw, dict) else {}
     has_street  = bool(raw.get('road') or raw.get('house_number'))
     has_zip     = bool(raw.get('postcode'))
     has_city    = bool(raw.get('city') or raw.get('town'))
@@ -169,15 +170,18 @@ def get_location_confidence_us(location, address):
     return "Low","Only approximate location matched. Please verify the address."
 
 def find_location_sequentially(geolocator, address):
+    if not address or not isinstance(address, str) or not address.strip():
+        return None
     attempts = [address, ", ".join(address.split(',')[-2:]) if ',' in address else address]
     for i, attempt in enumerate(attempts, 1):
         print(f"GEOCODING (ATTEMPT {i}): '{attempt}'")
         try:
-            loc = geolocator.geocode(attempt, country_codes="us", language='en')
-            if loc:
-                return loc
+            if geolocator:
+                loc = geolocator.geocode(attempt, country_codes="us", language='en')
+                if loc:
+                    return loc
             time.sleep(0.8)
-        except (GeocoderTimedOut, GeocoderServiceError) as e:
+        except Exception as e:
             print(f"GEOCODING ERROR attempt {i}: {e}")
     return None
 
@@ -524,4 +528,4 @@ with gr.Blocks(theme=gr.themes.Soft(), title="Homelytics US") as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    demo.launch(share=False)

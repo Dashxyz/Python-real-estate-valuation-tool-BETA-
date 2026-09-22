@@ -68,6 +68,8 @@ PREMIUM_SOCIETIES = {
 }
 
 def detect_society_premium(address):
+    if not address or not isinstance(address, str):
+        return None, 0.0
     addr_lower = address.lower()
     for society, premium in PREMIUM_SOCIETIES.items():
         if society in addr_lower:
@@ -97,14 +99,17 @@ AGE_MULTIPLIERS = {
 
 def compute_deterministic_estimate(city, property_type, sq_ft, land_sqft, condition, year_built_category, society_premium):
     try:
+        if (sq_ft is not None and sq_ft < 0) or (land_sqft is not None and land_sqft < 0):
+            return None, None, None
+        society_premium = society_premium if (isinstance(society_premium, (int, float)) and society_premium >= 0) else 0.0
         multiplier = CONDITION_MULTIPLIERS.get(condition, 1.0) * AGE_MULTIPLIERS.get(year_built_category, 1.0) * (1 + society_premium)
         if property_type == "Plot":
             base = PLOT_PRICE_PER_SQFT_PKR.get(city, 8000)
-            total = base * land_sqft * multiplier
+            total = base * (land_sqft or 0) * multiplier
             price_per_sqft = base * multiplier
         else:
             base = BASE_PRICE_SQFT_PKR.get(city, {}).get(property_type, 10000)
-            total = base * sq_ft * multiplier
+            total = base * (sq_ft or 0) * multiplier
             price_per_sqft = base * multiplier
         low  = total * 0.88
         high = total * 1.12
@@ -197,6 +202,8 @@ def get_location_confidence(location, address):
     return "Low", "Only approximate location matched. Verify the address."
 
 def find_location_sequentially(geolocator, address):
+    if not address or not isinstance(address, str) or not address.strip():
+        return None
     attempts = [
         f"{address}, Pakistan",
         address,
@@ -215,11 +222,12 @@ def find_location_sequentially(geolocator, address):
     for i, attempt in enumerate(attempts, 1):
         print(f"GEOCODING (ATTEMPT {i}): '{attempt}'")
         try:
-            loc = geolocator.geocode(attempt, country_codes="pk", language='en')
-            if loc:
-                return loc
+            if geolocator:
+                loc = geolocator.geocode(attempt, country_codes="pk", language='en')
+                if loc:
+                    return loc
             time.sleep(0.8)
-        except (GeocoderTimedOut, GeocoderServiceError) as e:
+        except Exception as e:
             print(f"GEOCODING ERROR attempt {i}: {e}")
     return None
 
@@ -563,4 +571,4 @@ with gr.Blocks(theme=gr.themes.Soft(), title="Homelytics Pakistan") as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    demo.launch(share=False)
